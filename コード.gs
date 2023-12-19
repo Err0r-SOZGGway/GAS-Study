@@ -1,64 +1,126 @@
-function doGet() {
-  myFunction();
-  let html = HtmlService.createTemplateFromFile('index');
-  return html.evaluate();
+function setValueTest() {
+  let ss = SpreadsheetApp.getActiveSpreadsheet();
+  let url = ss.getUrl();
+
+  // スプレッドシートの選択
+  let spreadsheet = SpreadsheetApp.openByUrl(url);
+  // シートの選択
+  let sheet = spreadsheet.getSheetByName(`シート1`);
+  // 書き込み
+  sheet.getRange('D2').setValue('未完了');
+  sheet.getRange('D3').setValue('未完了');
 }
 
-function myFunction() {
-   // 現在開いているシートを参照する
-  const sheet = SpreadsheetApp.getActiveSheet();
+function sendResult() {
+  let ss = SpreadsheetApp.getActiveSpreadsheet();
+  let url = ss.getUrl();
 
-   // 取得するデータ範囲
-  const firstCol = 1; // A列
-  // const lastCol  = 1; // A列のみ
-  // const firstRow = 2; // 2行目から
-  // const lastRow  = sheet.getLastRow(); // 最終行まで
+  // スプレッドシートの選択
+  let spreadsheet = SpreadsheetApp.openByUrl(url);
+  // シートの選択
+  let sheet = spreadsheet.getSheetByName(`シート1`);
+  // 名前の取得
+  let persons = sheet.getRange('A2:C3').getValues();
+  let name = persons[0][0];
+  // メールアドレスの取得
+  let mailAddress = persons[0][1];
+  // 獲得賞の取得
+  let award = persons[0][2];
 
-  // 入力するデータ範囲
-  const urlCol       = 2; // B列
-  const titleCol     = 3; // C列
+  // メールの本文作成
+  let message = `${name} 様
+  N予備校コンテスト運営局です。
+  この度は「Webページコンテスト」にご応募いただき、誠にありがとうございます。
+  
+  コンテストの結果、 ${name} 様は見事 ${award} に選ばれました`;
 
-  let response = UrlFetchApp.fetch("https://news.yahoo.co.jp/");
-  let text = response.getContentText("utf-8");
-  // console.log(text);
+  // オプションの設定
+  // let options = {
+  //   attachments: [DriveApp.getFileById('1QXzxzdZHR9z5z5S014NLSvPFXfbcLq9y').getBlob()]
+  // };
+  // メール送信
+  MailApp.sendEmail(mailAddress, 'コンテストの結果について', message);
+}
 
-  //トップニュースのブロックを抽出
-  let topic_block = Parser.data(text).from('class="sc-gjdhqi dgdDOH"').to('</div>').build();
-  // console.log(topic_block);
+function sendResults() {
+  let ss = SpreadsheetApp.getActiveSpreadsheet();
+  let url = ss.getUrl();
 
-  //ulタグで囲まれている記述（トップニュース）を抽出
-  let content_block = Parser.data(topic_block).from('<ul>').to('</ul>').build();
-  // console.log(content_block);
+  // スプレッドシートの選択
+  let spreadsheet = SpreadsheetApp.openByUrl(url);
+  // シートの選択
+  let sheet = spreadsheet.getSheetByName(`シート1`);
+  let numOfPersons = sheet.getLastRow() - 1;
+  let persons = sheet.getRange(2, 1, numOfPersons, 4).getValues();
+  
+  persons.forEach(function(person,i) {
+    let name = person[0];
+    let mailAddress = person[1];
+    let award = person[2];
+    let sendStatus = person[3];
 
-  // content_blockの要素のうち、aタグに囲まれている記述を抽出
-  topics = Parser.data(content_block).from('<a').to('</a>').iterate();
+    if (sendStatus === '未完了') {
 
-  // ニュースリスト用の配列変数を宣言
-  let newsList = new Array();
+      // メールの本文作成
+      let message = `${name} 様
+  N予備校コンテスト運営局です。
+  この度は「Webページコンテスト」にご応募いただき、誠にありがとうございます。
+  
+  コンテストの結果、 ${name} 様は見事 ${award} に選ばれました`;
 
-  // aタグに囲まれた記述の回数分、順位／タイトル／URLを抽出する
-    for(news of topics){
-       //配列内のインデックス番号+1を取得（ニュース掲載順位として利用）
-       let newsRank = topics.indexOf(news) + 1;
+      // オプションの設定
+      // let options = {
+      //   attachments: [DriveApp.getFileById('1QXzxzdZHR9z5z5S014NLSvPFXfbcLq9y').getBlob()]
+      // };
+      // メール送信
+      MailApp.sendEmail(mailAddress, 'コンテストの結果について', message);
 
-        //URL取得
-      let newsUrl = news.replace(/.*href="/,"").replace(/".*/,"");
-      //タイトル取得
-      let newsTitle = news.replace(/.*class="sc-dtLLSn dpehyt">/,"").replace(/<.*>/,"");
+      // メール送信状況の更新
+      let range2 = sheet.getRange(`D${i+2}`);
+      range2.setValue('完了');
+    }
+  });
+}
 
-       // ニュース順位、URL、タイトルの組を作成
-      let newsInfo = [newsRank, newsUrl, newsTitle];
+function changeHeader() {
+  let ss = SpreadsheetApp.getActiveSpreadsheet();
+  let url = ss.getUrl();
 
-      newsList.push(newsInfo);
+  // スプレッドシートの選択
+  let spreadsheet = SpreadsheetApp.openByUrl(url);
+  // シートの選択
+  let sheet = spreadsheet.getSheetByName(`シート1`);
+  // 書き込み
+  let range = sheet.getRange('A1:D1');
+  range.setBackground('black');
+  range.setFontColor('white');
+}
 
-      const Low = newsRank + 1;
+function omikuji() {
+  let unsei = ['大吉', '中吉', '小吉', '吉', '凶'];
+  let rand = Math.floor(Math.random() * unsei.length);
+  console.log(unsei[rand]);
+}
 
-    // シートに書き込み
-    sheet.getRange(Low, firstCol).setValue(newsRank);
-    sheet.getRange(Low, urlCol).setValue(newsUrl);
-    sheet.getRange(Low, titleCol).setValue(newsTitle);
-    
-   }
+function loopTest() {
+  let persons = [
+    [ '太郎', 'example1@gmail.com', '最優秀賞', '未送信' ],
+    [ '二郎', 'example2@gmail.com', '優秀賞', '未送信' ],
+    [ '三郎', 'example3@gmail.com', '健闘賞', '未送信' ]
+  ];
+  
+  persons.forEach(function(person, i) {
+    console.log(i, person);
+  });
 
-  console.log(newsList);
+  for (let person of persons) {
+    console.log(person);
+  }
+}
+
+function ifTest() {
+  let sendStatus = '未完了';
+  if (sendStatus === '未完了') {
+    console.log('メール送信します。');
+  }
 }
